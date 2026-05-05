@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Recipe Management</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="toastStack" class="toast-stack" aria-live="polite" aria-atomic="true"></div>
+  <div id="confirmDialog" class="confirm-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="confirm-card">
+      <div>
+        <p class="eyebrow">Please confirm</p>
+        <h3 id="confirmTitle">Are you sure?</h3>
+      </div>
+      <p id="confirmMessage"></p>
+      <div class="confirm-actions">
+        <button id="confirmCancelBtn" class="ghost" type="button">Cancel</button>
+        <button id="confirmOkBtn" class="danger" type="button">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <section class="auth-screen" id="authScreen">
+    <div class="auth-hero">
+      <div class="brand brand-large">
+        <span class="brand-mark">RM</span>
+        <div>
+          <h1>Recipe Management</h1>
+          <p>Share recipes, save favorites, and follow home cooks.</p>
+        </div>
+      </div>
+
+      <div class="auth-stack single-auth">
+        <div class="auth-showcase">
+          <div class="showcase-copy">
+            <p class="eyebrow">Fresh from the community</p>
+            <h2>Cook, collect, and share your best dishes.</h2>
+          </div>
+          <div class="showcase-stats">
+            <span>Recipes</span>
+            <span>Reviews</span>
+            <span>Collections</span>
+          </div>
+        </div>
+
+        <div class="auth-panel-stack">
+          <form id="loginForm" class="auth-card">
+            <div>
+              <p class="eyebrow">Welcome back</p>
+              <h2>Login</h2>
+            </div>
+            <label>Email<input name="email" type="email" required></label>
+            <label>Password<input name="password" type="password" required></label>
+            <label>Role
+              <select name="role" required>
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
+            </label>
+            <button class="primary" type="submit">Login</button>
+            <div id="loginMessage" class="form-message hidden"></div>
+            <p class="auth-switch">No account? <button id="showSignupBtn" type="button">Signup</button></p>
+          </form>
+
+          <form id="registerForm" class="auth-card hidden">
+            <div>
+              <p class="eyebrow">New here?</p>
+              <h2>Signup</h2>
+            </div>
+            <div class="auth-grid">
+              <label>Username<input name="username" required minlength="3"></label>
+              <label>Email<input name="email" type="email" required></label>
+              <label>First name<input name="first_name"></label>
+              <label>Last name<input name="last_name"></label>
+              <label>Password<input name="password" type="password" required minlength="6"></label>
+              <label>Confirm<input name="confirmPassword" type="password" required minlength="6"></label>
+            </div>
+            <button class="primary" type="submit">Create account</button>
+            <div id="registerMessage" class="form-message hidden"></div>
+            <p class="auth-switch">Already have an account? <button id="showLoginBtn" type="button">Login</button></p>
+          </form>
+        </div>
+      </div>
+
+      <div class="status auth-status hidden" id="authStatus"></div>
+    </div>
+  </section>
+
+  <div class="app-shell hidden" id="appShell">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark">RM</span>
+        <div>
+          <h1>Recipe Management</h1>
+          <p id="sessionLabel">Signed out</p>
+        </div>
+      </div>
+
+      <nav class="nav" aria-label="Primary">
+        <button class="nav-btn active" data-view="discover">Discover</button>
+        <button class="nav-btn" data-view="create">Create</button>
+        <button class="nav-btn" data-view="favorites">Favorites</button>
+        <button class="nav-btn" data-view="profile">Profile</button>
+        <button class="nav-btn" data-view="social">Social</button>
+        <button class="nav-btn" data-view="admin">Admin</button>
+      </nav>
+
+      <button id="logoutBtn" class="ghost" type="button">Logout</button>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Community kitchen</p>
+          <h2 id="viewTitle">Discover recipes</h2>
+        </div>
+        <div class="status hidden" id="status"></div>
+      </header>
+
+      <section class="view active" id="discoverView">
+        <div class="discover-hero">
+          <div>
+            <p class="eyebrow">Discover</p>
+            <h3>Find a recipe worth making tonight.</h3>
+          </div>
+          <div class="hero-tags">
+            <span>Vegetarian</span>
+            <span>Weeknight</span>
+            <span>Desserts</span>
+          </div>
+        </div>
+        <form id="searchForm" class="toolbar search-toolbar">
+          <input name="search" placeholder="Search recipes, ingredients, categories">
+          <select id="searchFoodTypeSelect" name="food_type">
+            <option value="">All food types</option>
+            <option value="veg">Veg</option>
+            <option value="non_veg">Non-veg</option>
+          </select>
+          <select id="searchCategorySelect" name="category_id">
+            <option value="">All categories</option>
+          </select>
+          <select id="searchDifficultySelect" name="difficulty_level_id">
+            <option value="">All difficulty levels</option>
+          </select>
+          <input name="max_prep_minutes" type="number" min="0" placeholder="Max prep min">
+          <select name="sort_by">
+            <option value="recent">Recent</option>
+            <option value="rating">Rating</option>
+            <option value="popularity">Popularity</option>
+          </select>
+          <button class="primary" type="submit">Search</button>
+        </form>
+        <div class="section-head">
+          <h3>Recipes</h3>
+          <button id="loadRecipesBtn" class="ghost" type="button">Refresh</button>
+        </div>
+        <div id="recipeDetail" class="recipe-detail hidden"></div>
+        <div id="recipeGrid" class="recipe-grid"></div>
+      </section>
+
+      <section class="view" id="createView">
+        <div class="section-head">
+          <h3 id="recipeFormTitle">Publish recipe</h3>
+          <button id="loadMyRecipesBtn" class="ghost" type="button">My recipes</button>
+        </div>
+        <form id="recipeForm" class="form-grid" enctype="multipart/form-data">
+          <label>Title<input name="title" required minlength="3"></label>
+          <label>Servings<input name="servings" type="number" min="1"></label>
+          <div class="wide">
+            <p class="field-label">Food type</p>
+            <div class="segmented-options">
+              <label class="food-option veg-option"><input name="food_type" type="radio" value="veg" checked> Veg</label>
+              <label class="food-option nonveg-option"><input name="food_type" type="radio" value="non_veg"> Non-veg</label>
+            </div>
+          </div>
+          <label>Category
+            <select id="recipeCategorySelect" name="category_id">
+              <option value="">Select category</option>
+            </select>
+          </label>
+          <label>Difficulty
+            <select id="recipeDifficultySelect" name="difficulty_level_id">
+              <option value="">Select difficulty</option>
+            </select>
+          </label>
+          <div>
+            <p class="field-label">Preparation time</p>
+            <input name="prep_minutes" type="number" min="0" placeholder="Minutes">
+          </div>
+          <div>
+            <p class="field-label">Cooking time</p>
+            <input name="cook_minutes" type="number" min="0" placeholder="Minutes">
+          </div>
+          <label class="wide">Description<textarea name="description" rows="3"></textarea></label>
+          <label class="wide">Ingredients<textarea name="ingredients" rows="5" required></textarea></label>
+          <label class="wide">Instructions<textarea name="instructions" rows="6" required></textarea></label>
+          <label class="wide">Featured image<input name="featured_image" type="file" accept="image/*"></label>
+          <div class="recipe-actions wide">
+            <button id="recipeSubmitBtn" class="primary" type="submit">Publish recipe</button>
+            <button id="cancelRecipeEditBtn" class="ghost hidden" type="button">Cancel edit</button>
+          </div>
+        </form>
+        <div class="section-head">
+          <h3>My recipes</h3>
+        </div>
+        <div id="myRecipesList" class="list"></div>
+      </section>
+
+      <section class="view" id="favoritesView">
+        <div class="split">
+          <div>
+            <div class="section-head">
+              <h3>Favorites</h3>
+              <button id="loadFavoritesBtn" class="ghost" type="button">Refresh</button>
+            </div>
+            <div id="favoritesList" class="list"></div>
+          </div>
+          <div>
+            <div class="section-head">
+              <h3>Collections</h3>
+            </div>
+            <form id="collectionForm" class="inline-form">
+              <input name="name" placeholder="Collection name" required>
+              <input name="description" placeholder="Description">
+              <label class="check"><input name="is_public" type="checkbox"> Public</label>
+              <button id="collectionSubmitBtn" class="primary" type="submit">Create</button>
+              <button id="cancelCollectionEditBtn" class="ghost hidden" type="button">Cancel</button>
+            </form>
+            <div id="collectionsList" class="list"></div>
+            <div id="collectionRecipesList" class="list collection-recipes-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="profileView">
+        <div class="split">
+          <form id="profileForm" class="form-grid">
+            <label>Username<input name="username"></label>
+            <label>First name<input name="first_name"></label>
+            <label>Last name<input name="last_name"></label>
+            <label class="wide">Bio<textarea name="bio" rows="4"></textarea></label>
+            <button class="primary wide" type="submit">Save profile</button>
+          </form>
+          <div>
+            <form id="profilePictureForm" class="inline-form">
+              <input name="profile_picture" type="file" accept="image/*" required>
+              <button class="primary" type="submit">Upload</button>
+            </form>
+            <div id="profileDetails" class="profile-panel"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="socialView">
+        <div class="toolbar">
+          <input id="userSearchInput" placeholder="Search users by name or email">
+          <button id="searchUsersBtn" class="primary" type="button">Search</button>
+          <button id="loadFeedBtn" class="ghost" type="button">Feed</button>
+        </div>
+        <div id="userSearchResults" class="list social-results"></div>
+        <div id="activityFeed" class="list"></div>
+      </section>
+
+      <section class="view" id="adminView">
+        <div class="admin-grid">
+          <button class="primary" id="loadUsersBtn" type="button">Users</button>
+          <button class="primary" id="loadAdminRecipesBtn" type="button">Recipes</button>
+          <button class="primary" id="loadStatsBtn" type="button">Stats</button>
+        </div>
+        <div id="adminStats" class="admin-stats"></div>
+        <div class="split admin-split">
+          <div>
+            <div class="section-head">
+              <h3>User management</h3>
+            </div>
+            <div id="adminUsersList" class="list"></div>
+          </div>
+          <div>
+            <div class="section-head">
+              <h3>Recipe management</h3>
+            </div>
+            <div id="adminRecipesList" class="list"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <template id="recipeCardTemplate">
+    <article class="recipe-card">
+      <img class="recipe-image" alt="">
+      <div class="recipe-body">
+        <div class="recipe-meta"></div>
+        <h3></h3>
+        <p></p>
+        <div class="recipe-actions">
+          <button class="ghost details-btn" type="button">Open</button>
+          <button class="primary favorite-btn" type="button">Favorite</button>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <script src="/app.js"></script>
+</body>
+</html>
