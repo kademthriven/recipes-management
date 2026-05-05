@@ -43,7 +43,7 @@ const hasS3Config = () => (
 );
 
 const uploadLocally = async (file, folder) => {
-  const uploadDir = path.join(__dirname, '..', '..', 'uploads', folder);
+  const uploadDir = path.join(__dirname, '..', 'uploads', folder);
   const safeName = path.basename(file.originalname).replace(/[^a-zA-Z0-9._-]/g, '-');
   const fileName = `${Date.now()}-${safeName}`;
 

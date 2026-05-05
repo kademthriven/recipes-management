@@ -25,12 +25,12 @@ Route → Controller → Service → Database
 
 ### Example: Creating a Recipe
 
-**1. Route** (`src/routes/recipeRoutes.js`):
+**1. Route** (`routes/recipeRoutes.js`):
 ```javascript
 router.post('/', authenticateToken, upload.single('featured_image'), recipeController.createRecipe);
 ```
 
-**2. Controller** (`src/controllers/recipeController.js`):
+**2. Controller** (`controllers/recipeController.js`):
 ```javascript
 async createRecipe(req, res, next) {
   try {
@@ -47,7 +47,7 @@ async createRecipe(req, res, next) {
 }
 ```
 
-**3. Service** (`src/services/recipeService.js`):
+**3. Service** (`services/recipeService.js`):
 ```javascript
 async createRecipe(userId, recipeData, imageUrl) {
   const result = await pool.query(
@@ -73,7 +73,7 @@ async createRecipe(userId, recipeData, imageUrl) {
 #### Step 1: Define the Database Schema
 
 ```sql
--- In src/database/schema.sql
+-- In database/schema.sql
 CREATE TABLE new_feature (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT,
@@ -87,7 +87,7 @@ CREATE INDEX idx_new_feature_user_id ON new_feature(user_id);
 #### Step 2: Create Validation Schema
 
 ```javascript
-// In src/validators/schemas.js
+// In validators/schemas.js
 const newFeatureSchema = Joi.object({
   data: Joi.string().required(),
   // ... other validations
@@ -97,7 +97,7 @@ const newFeatureSchema = Joi.object({
 #### Step 3: Create Service
 
 ```javascript
-// Create src/services/newFeatureService.js
+// Create services/newFeatureService.js
 class NewFeatureService {
   async create(userId, data) {
     try {
@@ -127,7 +127,7 @@ module.exports = new NewFeatureService();
 #### Step 4: Create Controller
 
 ```javascript
-// Create src/controllers/newFeatureController.js
+// Create controllers/newFeatureController.js
 class NewFeatureController {
   async create(req, res, next) {
     try {
@@ -162,7 +162,7 @@ module.exports = new NewFeatureController();
 #### Step 5: Create Routes
 
 ```javascript
-// Create src/routes/newFeatureRoutes.js
+// Create routes/newFeatureRoutes.js
 const express = require('express');
 const router = express.Router();
 const newFeatureController = require('../controllers/newFeatureController');
@@ -177,7 +177,7 @@ module.exports = router;
 #### Step 6: Mount Routes
 
 ```javascript
-// In src/index.js
+// In app.js
 const newFeatureRoutes = require('./routes/newFeatureRoutes');
 app.use('/api/new-feature', newFeatureRoutes);
 ```
@@ -584,26 +584,26 @@ const result = await pool.query(query, [id]);
 ```
 Need to add...        → Create/Edit...
 ─────────────────────────────────────
-New database table    → src/database/schema.sql
-New validation rule   → src/validators/schemas.js
-New business logic    → src/services/
-New HTTP handler      → src/controllers/
-New endpoint          → src/routes/
-New authorization     → src/middleware/auth.js
-New error type        → src/utils/appError.js
-New utility function  → src/utils/
+New database table    → database/schema.sql
+New validation rule   → validators/schemas.js
+New business logic    → services/
+New HTTP handler      → controllers/
+New endpoint          → routes/
+New authorization     → middleware/auth.js
+New error type        → utils/appError.js
+New utility function  → utils/
 ```
 
 ### Key Files to Know
 
 ```
-src/index.js                  - Express app entry point
-src/config/database.js        - Database connection
-src/middleware/               - Middleware functions
-src/validators/schemas.js     - Joi validation schemas
-src/services/                 - Business logic
-src/controllers/              - HTTP handlers
-src/routes/                   - API endpoints
+app.js                  - Express app entry point
+config/database.js        - Database connection
+middleware/               - Middleware functions
+validators/schemas.js     - Joi validation schemas
+services/                 - Business logic
+controllers/              - HTTP handlers
+routes/                   - API endpoints
 ```
 
 ### Environment Variables

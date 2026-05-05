@@ -10,7 +10,7 @@ A complete, production-ready backend API for the Recipe Management and Sharing P
 
 ```
 Recipe_Management/
-├── src/
+├── 
 │   ├── config/
 │   │   └── database.js                    # MySQL connection pool
 │   ├── controllers/                       # Request handlers
@@ -47,7 +47,7 @@ Recipe_Management/
 │   ├── database/
 │   │   ├── schema.sql                     # Database schema (14 tables)
 │   │   └── seed.js                        # Database seeding script
-│   └── index.js                           # Express app entry point
+│   └── app.js                           # Express app entry point
 ├── docs/
 │   ├── API_DOCUMENTATION.md               # Complete API reference (60+ endpoints)
 │   └── TECHNICAL_SPECIFICATIONS.md        # Architecture & design decisions
@@ -280,7 +280,7 @@ cp .env.example .env
 
 # 3. Setup database
 mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS recipe_management;"
-mysql -u root -p < src/database/schema.sql
+mysql -u root -p < database/schema.sql
 
 # 4. Seed initial data
 npm run seed

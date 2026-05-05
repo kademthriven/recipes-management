@@ -9,6 +9,7 @@ const compression = require('compression');
 const { Readable } = require('stream');
 
 const config = require('./config/env');
+const pool = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 const createRateLimiter = require('./middleware/rateLimiter');
 const AppError = require('./utils/appError');
@@ -22,8 +23,8 @@ const socialRoutes = require('./routes/socialRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
-const frontendPath = path.join(__dirname, '..', 'frontend');
-const uploadsPath = path.join(__dirname, '..', 'uploads');
+const frontendPath = path.join(__dirname, 'frontend');
+const uploadsPath = path.join(__dirname, 'uploads');
 const cspDirectives = {
   defaultSrc: ["'self'"],
   baseUri: ["'self'"],
@@ -142,5 +143,56 @@ app.get('*', (req, res) => {
 });
 
 app.use(errorHandler);
+
+let server;
+
+const shutdown = async signal => {
+  console.log(`${signal} received. Shutting down gracefully...`);
+
+  if (!server) {
+    await pool.end();
+    process.exit(0);
+  }
+
+  server.close(async () => {
+    try {
+      await pool.end();
+      console.log('Shutdown complete');
+      process.exit(0);
+    } catch (error) {
+      console.error('Error during shutdown:', error);
+      process.exit(1);
+    }
+  });
+};
+
+const start = () => {
+  if (server) return server;
+
+  server = app.listen(config.port, () => {
+    console.log(`Server is running on port ${config.port}`);
+  });
+
+  return server;
+};
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+process.on('unhandledRejection', error => {
+  console.error('Unhandled rejection:', error);
+  shutdown('unhandledRejection');
+});
+
+process.on('uncaughtException', error => {
+  console.error('Uncaught exception:', error);
+  process.exit(1);
+});
+
+if (require.main === module) {
+  start();
+}
+
+app.start = start;
 
 module.exports = app;

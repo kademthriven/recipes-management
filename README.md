@@ -157,7 +157,7 @@ exit
 Execute the SQL schema file to create tables:
 
 ```bash
-mysql -u root -p < src/database/schema.sql
+mysql -u root -p < database/schema.sql
 ```
 
 ### 3. Verify Database Creation
@@ -232,7 +232,7 @@ Expected response:
 
 ```
 recipe-management-api/
-├── src/
+├── 
 │   ├── config/
 │   │   └── database.js              # Database connection configuration
 │   ├── controllers/
@@ -268,7 +268,7 @@ recipe-management-api/
 │   │   └── s3.js                    # AWS S3 utilities
 │   ├── database/
 │   │   └── schema.sql               # Database schema
-│   └── index.js                     # Application entry point
+│   └── app.js                     # Application entry point
 ├── docs/
 │   └── API_DOCUMENTATION.md         # Comprehensive API documentation
 ├── .env.example                     # Environment variables template
@@ -519,7 +519,7 @@ PORT=3001 npm run dev
 **Solution**:
 ```bash
 # Re-run schema
-mysql -u root -p < src/database/schema.sql
+mysql -u root -p < database/schema.sql
 
 # Or manually check tables
 mysql -u root -p recipe_management
@@ -573,7 +573,7 @@ npm test
 npm run lint
 
 # Database schema
-mysql -u root -p < src/database/schema.sql
+mysql -u root -p < database/schema.sql
 
 # Connect to database
 mysql -u root -p recipe_management

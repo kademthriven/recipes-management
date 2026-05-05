@@ -55,7 +55,7 @@ npm install
    ```
 4. Load schema:
    ```powershell
-   mysql -u root -p < src/database/schema.sql
+   mysql -u root -p < database/schema.sql
    ```
 5. Seed initial data:
    ```powershell
@@ -73,7 +73,7 @@ sudo service mysql start        # Linux
 mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS recipe_management;"
 
 # Load schema
-mysql -u root -p < src/database/schema.sql
+mysql -u root -p < database/schema.sql
 
 # Seed initial data
 npm run seed
@@ -157,7 +157,7 @@ PORT=3001 npm run dev
 ```bash
 # Drop and recreate
 mysql -u root -p -e "DROP DATABASE IF EXISTS recipe_management; CREATE DATABASE recipe_management;"
-mysql -u root -p < src/database/schema.sql
+mysql -u root -p < database/schema.sql
 npm run seed
 ```
 
