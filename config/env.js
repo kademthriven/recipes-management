@@ -57,6 +57,7 @@ module.exports = {
   appUrl: process.env.APP_URL || 'http://localhost:5000',
   frontendUrl: process.env.FRONTEND_URL || '',
   allowedOrigins: getList(process.env.ALLOWED_ORIGINS),
+  forceHttps: process.env.FORCE_HTTPS === 'true',
   bodyLimit: process.env.BODY_LIMIT || '1mb',
   rateLimit: {
     windowMs: getNumber('RATE_LIMIT_WINDOW_MS', 15 * 60 * 1000),

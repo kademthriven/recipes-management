@@ -9,6 +9,7 @@ NODE_ENV=production
 PORT=5000
 APP_URL=https://your-domain.com
 ALLOWED_ORIGINS=https://your-domain.com
+FORCE_HTTPS=true
 
 DB_HOST=your-db-host
 DB_PORT=3306
@@ -51,6 +52,7 @@ Use a process manager in production, such as PM2, Docker, systemd, Render, Railw
 
 - Keep `.env` out of git.
 - Use HTTPS in front of the Node process.
+- Keep `FORCE_HTTPS=false` while testing with a raw `http://IP:PORT` URL. Set it to `true` only after HTTPS is configured.
 - Set `ALLOWED_ORIGINS` to the deployed domain only.
 - Use a managed MySQL database with automated backups.
 - Prefer S3 for uploads in production. Local `/uploads` storage is intended for development or single-server deployments with persistent disks.

@@ -43,7 +43,7 @@ const allowedOrigins = new Set([
   ...config.allowedOrigins,
 ].filter(Boolean));
 
-if (config.isProduction) {
+if (config.forceHttps) {
   cspDirectives.upgradeInsecureRequests = [];
 }
 
@@ -80,6 +80,16 @@ app.use('/uploads', express.static(uploadsPath, {
   etag: true,
   maxAge: config.isProduction ? '1d' : 0,
 }));
+
+app.get('/styles.css', (req, res) => {
+  res.type('text/css');
+  res.sendFile(path.join(frontendPath, 'styles.css'));
+});
+
+app.get('/script.js', (req, res) => {
+  res.type('application/javascript');
+  res.sendFile(path.join(frontendPath, 'script.js'));
+});
 
 app.get('/api/files/s3/*', async (req, res, next) => {
   try {
