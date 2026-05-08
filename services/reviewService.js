@@ -1,27 +1,49 @@
 const pool = require('../config/database');
 const AppError = require('../utils/appError');
 const socialService = require('./socialService');
+const { sequelize, Recipe, Review } = require('../models');
 
 class ReviewService {
   async createReview(recipeId, userId, rating, comment) {
     try {
-      // Check if recipe exists
-      const recipeResult = await pool.query('SELECT id FROM recipes WHERE id = $1', [recipeId]);
+      return await sequelize.transaction(async transaction => {
+        const recipe = await Recipe.findByPk(recipeId, {
+          attributes: ['id'],
+          transaction,
+        });
 
-      if (recipeResult.rows.length === 0) {
-        throw new AppError('Recipe not found', 404);
-      }
+        if (!recipe) {
+          throw new AppError('Recipe not found', 404);
+        }
 
-      const result = await pool.query(
-        'INSERT INTO reviews (recipe_id, user_id, rating, comment) VALUES ($1, $2, $3, $4) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id), rating = VALUES(rating), comment = VALUES(comment), updated_at = CURRENT_TIMESTAMP',
-        [recipeId, userId, rating, comment || null]
-      );
+        const existingReview = await Review.findOne({
+          where: { recipe_id: recipeId, user_id: userId },
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
 
-      const review = await pool.query('SELECT * FROM reviews WHERE id = $1', [result.insertId]);
+        const review = existingReview
+          ? await existingReview.update({
+            rating,
+            comment: comment || null,
+            updated_at: new Date(),
+          }, { transaction })
+          : await Review.create({
+            recipe_id: recipeId,
+            user_id: userId,
+            rating,
+            comment: comment || null,
+          }, { transaction });
 
-      await socialService.addActivityForFollowers(userId, 'recipe_reviewed', recipeId);
+        await socialService.addActivityForFollowers(
+          userId,
+          'recipe_reviewed',
+          recipeId,
+          { transaction }
+        );
 
-      return review.rows[0];
+        return review.get({ plain: true });
+      });
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw error;

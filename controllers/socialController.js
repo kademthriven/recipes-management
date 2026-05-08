@@ -1,5 +1,4 @@
 const socialService = require('../services/socialService');
-const AppError = require('../utils/appError');
 
 class SocialController {
   async searchUsers(req, res, next) {

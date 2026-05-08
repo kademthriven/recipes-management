@@ -37,15 +37,24 @@ const cspDirectives = {
   scriptSrcAttr: ["'none'"],
   styleSrc: ["'self'", 'https:', "'unsafe-inline'"],
 };
+
+const normalizeOrigin = value => {
+  if (!value) return '';
+
+  try {
+    return new URL(value).origin;
+  } catch (error) {
+    return String(value).replace(/\/+$/, '');
+  }
+};
+
 const allowedOrigins = new Set([
   config.appUrl,
   config.frontendUrl,
   ...config.allowedOrigins,
-].filter(Boolean));
+].map(normalizeOrigin).filter(Boolean));
 
-if (config.forceHttps) {
-  cspDirectives.upgradeInsecureRequests = [];
-}
+cspDirectives.upgradeInsecureRequests = config.forceHttps ? [] : null;
 
 app.set('trust proxy', 1);
 
@@ -53,19 +62,31 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: cspDirectives,
   },
+  hsts: config.forceHttps ? undefined : false,
   crossOriginResourcePolicy: { policy: 'same-origin' },
 }));
 
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin || !config.isProduction || allowedOrigins.has(origin)) {
-      return callback(null, true);
-    }
+app.use((req, res, next) => {
+  const currentOrigin = normalizeOrigin(`${req.protocol}://${req.get('host')}`);
 
-    return callback(new AppError('Origin not allowed by CORS', 403));
-  },
-  credentials: true,
-}));
+  return cors({
+    origin(origin, callback) {
+      const requestOrigin = normalizeOrigin(origin);
+
+      if (
+        !requestOrigin
+        || !config.isProduction
+        || allowedOrigins.has(requestOrigin)
+        || requestOrigin === currentOrigin
+      ) {
+        return callback(null, true);
+      }
+
+      return callback(new AppError('Origin not allowed by CORS', 403));
+    },
+    credentials: true,
+  })(req, res, next);
+});
 
 app.use(compression());
 app.use(morgan(config.isProduction ? 'combined' : 'dev'));
@@ -89,6 +110,10 @@ app.get('/styles.css', (req, res) => {
 app.get('/script.js', (req, res) => {
   res.type('application/javascript');
   res.sendFile(path.join(frontendPath, 'script.js'));
+});
+
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end();
 });
 
 app.get('/api/files/s3/*', async (req, res, next) => {

@@ -1,5 +1,6 @@
 const pool = require('../config/database');
 const AppError = require('../utils/appError');
+const { ActivityFeed, Follow } = require('../models');
 
 class SocialService {
   async searchUsers(query, currentUserId = null, limit = 10) {
@@ -158,33 +159,43 @@ class SocialService {
     }
   }
 
-  async addActivityFeed(userId, actorId, activityType, recipeId = null) {
+  async addActivityFeed(userId, actorId, activityType, recipeId = null, options = {}) {
     try {
-      const result = await pool.query(
-        'INSERT INTO activity_feed (user_id, actor_id, activity_type, recipe_id) VALUES ($1, $2, $3, $4)',
-        [userId, actorId, activityType, recipeId || null]
-      );
+      const activity = await ActivityFeed.create({
+        user_id: userId,
+        actor_id: actorId,
+        activity_type: activityType,
+        recipe_id: recipeId || null,
+      }, { transaction: options.transaction });
 
-      const activity = await pool.query('SELECT * FROM activity_feed WHERE id = $1', [result.insertId]);
-
-      return activity.rows[0];
+      return activity.get({ plain: true });
     } catch (error) {
       throw error;
     }
   }
 
-  async addActivityForFollowers(actorId, activityType, recipeId = null) {
+  async addActivityForFollowers(actorId, activityType, recipeId = null, options = {}) {
     try {
-      const followers = await pool.query(
-        'SELECT follower_id FROM follows WHERE following_id = $1',
-        [actorId]
-      );
+      const followers = await Follow.findAll({
+        attributes: ['follower_id'],
+        where: { following_id: actorId },
+        raw: true,
+        transaction: options.transaction,
+      });
 
-      for (const follower of followers.rows) {
-        await this.addActivityFeed(follower.follower_id, actorId, activityType, recipeId);
+      if (followers.length > 0) {
+        await ActivityFeed.bulkCreate(
+          followers.map(follower => ({
+            user_id: follower.follower_id,
+            actor_id: actorId,
+            activity_type: activityType,
+            recipe_id: recipeId || null,
+          })),
+          { transaction: options.transaction }
+        );
       }
 
-      return { inserted: followers.rows.length };
+      return { inserted: followers.length };
     } catch (error) {
       throw error;
     }

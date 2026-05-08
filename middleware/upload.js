@@ -1,5 +1,4 @@
 const multer = require('multer');
-const path = require('path');
 const AppError = require('../utils/appError');
 
 // Set storage

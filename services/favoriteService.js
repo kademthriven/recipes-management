@@ -1,29 +1,38 @@
 const pool = require('../config/database');
 const AppError = require('../utils/appError');
 const socialService = require('./socialService');
+const { sequelize, Favorite, Recipe } = require('../models');
 
 class FavoriteService {
   async addFavorite(userId, recipeId) {
     try {
-      // Check if recipe exists
-      const recipeResult = await pool.query('SELECT id FROM recipes WHERE id = $1', [recipeId]);
+      return await sequelize.transaction(async transaction => {
+        const recipe = await Recipe.findByPk(recipeId, {
+          attributes: ['id'],
+          transaction,
+        });
 
-      if (recipeResult.rows.length === 0) {
-        throw new AppError('Recipe not found', 404);
-      }
+        if (!recipe) {
+          throw new AppError('Recipe not found', 404);
+        }
 
-      const result = await pool.query(
-        'INSERT INTO favorites (user_id, recipe_id) VALUES ($1, $2) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)',
-        [userId, recipeId]
-      );
+        const [favorite, created] = await Favorite.findOrCreate({
+          where: { user_id: userId, recipe_id: recipeId },
+          defaults: { user_id: userId, recipe_id: recipeId },
+          transaction,
+        });
 
-      const favorite = await pool.query('SELECT * FROM favorites WHERE id = $1', [result.insertId]);
+        if (created) {
+          await socialService.addActivityForFollowers(
+            userId,
+            'recipe_favorited',
+            recipeId,
+            { transaction }
+          );
+        }
 
-      if (result.affectedRows === 1) {
-        await socialService.addActivityForFollowers(userId, 'recipe_favorited', recipeId);
-      }
-
-      return favorite.rows[0];
+        return favorite.get({ plain: true });
+      });
     } catch (error) {
       if (error instanceof AppError) throw error;
       if (error.code === 'ER_DUP_ENTRY' || error.errno === 1062) {

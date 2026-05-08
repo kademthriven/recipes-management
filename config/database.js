@@ -1,16 +1,5 @@
-const mysql = require('mysql2/promise');
-const config = require('./env');
-
-const pool = mysql.createPool({
-  host: config.database.host,
-  port: config.database.port,
-  database: config.database.name,
-  user: config.database.user,
-  password: config.database.password,
-  waitForConnections: true,
-  connectionLimit: config.database.connectionLimit,
-  queueLimit: 0,
-});
+const { QueryTypes } = require('sequelize');
+const sequelize = require('./sequelize');
 
 const toMysqlPlaceholders = (sql, values = []) => {
   const orderedValues = [];
@@ -26,7 +15,10 @@ const toMysqlPlaceholders = (sql, values = []) => {
 module.exports = {
   async query(sql, values = []) {
     const query = toMysqlPlaceholders(sql, values);
-    const [result] = await pool.query(query.text, query.values);
+    const [result, metadata] = await sequelize.query(query.text, {
+      replacements: query.values,
+      type: QueryTypes.RAW,
+    });
 
     if (Array.isArray(result)) {
       return {
@@ -37,13 +29,13 @@ module.exports = {
 
     return {
       rows: [],
-      rowCount: result.affectedRows || 0,
-      insertId: result.insertId,
-      affectedRows: result.affectedRows || 0,
+      rowCount: metadata?.affectedRows || result?.affectedRows || 0,
+      insertId: metadata?.insertId || result?.insertId,
+      affectedRows: metadata?.affectedRows || result?.affectedRows || 0,
     };
   },
 
   async end() {
-    await pool.end();
+    await sequelize.close();
   },
 };

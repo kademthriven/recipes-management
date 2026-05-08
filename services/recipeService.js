@@ -1,45 +1,48 @@
 const pool = require('../config/database');
 const AppError = require('../utils/appError');
 const socialService = require('./socialService');
+const { sequelize, Recipe, RecipeDietaryPreference } = require('../models');
 
 class RecipeService {
   async createRecipe(userId, recipeData, imageUrl) {
     try {
-      const result = await pool.query(
-        'INSERT INTO recipes (user_id, title, description, ingredients, instructions, cooking_time, preparation_time, food_type, servings, difficulty_level_id, category_id, featured_image_url, is_published) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)',
-        [
-          userId,
-          recipeData.title,
-          recipeData.description,
-          recipeData.ingredients,
-          recipeData.instructions,
-          recipeData.cooking_time || null,
-          recipeData.preparation_time || null,
-          recipeData.food_type || 'veg',
-          recipeData.servings || null,
-          recipeData.difficulty_level_id || null,
-          recipeData.category_id || null,
-          imageUrl || null,
-          true,
-        ]
-      );
+      return await sequelize.transaction(async transaction => {
+        const recipe = await Recipe.create({
+          user_id: userId,
+          title: recipeData.title,
+          description: recipeData.description,
+          ingredients: recipeData.ingredients,
+          instructions: recipeData.instructions,
+          cooking_time: recipeData.cooking_time || null,
+          preparation_time: recipeData.preparation_time || null,
+          food_type: recipeData.food_type || 'veg',
+          servings: recipeData.servings || null,
+          difficulty_level_id: recipeData.difficulty_level_id || null,
+          category_id: recipeData.category_id || null,
+          featured_image_url: imageUrl || null,
+          is_published: true,
+        }, { transaction });
 
-      const recipeResult = await pool.query('SELECT * FROM recipes WHERE id = $1', [result.insertId]);
-      const recipe = recipeResult.rows[0];
-
-      // Add dietary preferences if provided
-      if (recipeData.dietary_preferences && recipeData.dietary_preferences.length > 0) {
-        for (const prefId of recipeData.dietary_preferences) {
-          await pool.query(
-            'INSERT IGNORE INTO recipe_dietary_preferences (recipe_id, dietary_preference_id) VALUES ($1, $2)',
-            [recipe.id, prefId]
+        if (recipeData.dietary_preferences?.length > 0) {
+          await RecipeDietaryPreference.bulkCreate(
+            recipeData.dietary_preferences.map(prefId => ({
+              recipe_id: recipe.id,
+              dietary_preference_id: prefId,
+            })),
+            { ignoreDuplicates: true, transaction }
           );
         }
-      }
 
-      await socialService.addActivityForFollowers(userId, 'recipe_created', recipe.id);
+        await socialService.addActivityForFollowers(
+          userId,
+          'recipe_created',
+          recipe.id,
+          { transaction }
+        );
 
-      return recipe;
+        await recipe.reload({ transaction });
+        return recipe.get({ plain: true });
+      });
     } catch (error) {
       throw error;
     }
@@ -92,105 +95,61 @@ class RecipeService {
 
   async updateRecipe(recipeId, userId, updateData) {
     try {
-      // Check if recipe exists and belongs to user
-      const existingRecipe = await pool.query(
-        'SELECT id, user_id FROM recipes WHERE id = $1',
-        [recipeId]
-      );
+      return await sequelize.transaction(async transaction => {
+        const recipe = await Recipe.findByPk(recipeId, {
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        });
 
-      if (existingRecipe.rows.length === 0) {
-        throw new AppError('Recipe not found', 404);
-      }
-
-      if (String(existingRecipe.rows[0].user_id) !== String(userId)) {
-        throw new AppError('You do not have permission to update this recipe', 403);
-      }
-
-      const fields = [];
-      const values = [];
-      let paramCount = 1;
-
-      if (updateData.title) {
-        fields.push(`title = $${paramCount}`);
-        values.push(updateData.title);
-        paramCount++;
-      }
-      if (updateData.description) {
-        fields.push(`description = $${paramCount}`);
-        values.push(updateData.description);
-        paramCount++;
-      }
-      if (updateData.ingredients) {
-        fields.push(`ingredients = $${paramCount}`);
-        values.push(updateData.ingredients);
-        paramCount++;
-      }
-      if (updateData.instructions) {
-        fields.push(`instructions = $${paramCount}`);
-        values.push(updateData.instructions);
-        paramCount++;
-      }
-      if (updateData.cooking_time !== undefined) {
-        fields.push(`cooking_time = $${paramCount}`);
-        values.push(updateData.cooking_time);
-        paramCount++;
-      }
-      if (updateData.preparation_time !== undefined) {
-        fields.push(`preparation_time = $${paramCount}`);
-        values.push(updateData.preparation_time);
-        paramCount++;
-      }
-      if (updateData.food_type !== undefined) {
-        fields.push(`food_type = $${paramCount}`);
-        values.push(updateData.food_type);
-        paramCount++;
-      }
-      if (updateData.servings) {
-        fields.push(`servings = $${paramCount}`);
-        values.push(updateData.servings);
-        paramCount++;
-      }
-      if (updateData.difficulty_level_id) {
-        fields.push(`difficulty_level_id = $${paramCount}`);
-        values.push(updateData.difficulty_level_id);
-        paramCount++;
-      }
-      if (updateData.category_id) {
-        fields.push(`category_id = $${paramCount}`);
-        values.push(updateData.category_id);
-        paramCount++;
-      }
-      if (updateData.featured_image_url !== undefined) {
-        fields.push(`featured_image_url = $${paramCount}`);
-        values.push(updateData.featured_image_url);
-        paramCount++;
-      }
-
-      fields.push(`updated_at = $${paramCount}`);
-      values.push(new Date());
-      paramCount++;
-
-      values.push(recipeId);
-
-      const query = `UPDATE recipes SET ${fields.join(', ')} WHERE id = $${paramCount}`;
-
-      await pool.query(query, values);
-
-      // Update dietary preferences if provided
-      if (updateData.dietary_preferences) {
-        await pool.query('DELETE FROM recipe_dietary_preferences WHERE recipe_id = $1', [recipeId]);
-
-        for (const prefId of updateData.dietary_preferences) {
-          await pool.query(
-            'INSERT IGNORE INTO recipe_dietary_preferences (recipe_id, dietary_preference_id) VALUES ($1, $2)',
-            [recipeId, prefId]
-          );
+        if (!recipe) {
+          throw new AppError('Recipe not found', 404);
         }
-      }
 
-      const result = await pool.query('SELECT * FROM recipes WHERE id = $1', [recipeId]);
+        if (String(recipe.user_id) !== String(userId)) {
+          throw new AppError('You do not have permission to update this recipe', 403);
+        }
 
-      return result.rows[0];
+        const updates = { updated_at: new Date() };
+        [
+          'title',
+          'description',
+          'ingredients',
+          'instructions',
+          'cooking_time',
+          'preparation_time',
+          'food_type',
+          'servings',
+          'difficulty_level_id',
+          'category_id',
+          'featured_image_url',
+        ].forEach(field => {
+          if (updateData[field] !== undefined) {
+            updates[field] = updateData[field];
+          }
+        });
+
+        await recipe.update(updates, { transaction });
+
+        if (updateData.dietary_preferences) {
+          await RecipeDietaryPreference.destroy({
+            where: { recipe_id: recipeId },
+            transaction,
+          });
+
+          if (updateData.dietary_preferences.length > 0) {
+            await RecipeDietaryPreference.bulkCreate(
+              updateData.dietary_preferences.map(prefId => ({
+                recipe_id: recipeId,
+                dietary_preference_id: prefId,
+              })),
+              { ignoreDuplicates: true, transaction }
+            );
+          }
+        }
+
+        await recipe.reload({ transaction });
+        return recipe.get({ plain: true });
+      });
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw error;
